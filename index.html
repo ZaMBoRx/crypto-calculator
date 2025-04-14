@@ -152,16 +152,15 @@
     
     let price = null;
     try {
-      const assetId = asset === 'bitcoin' ? 'bitcoin' : 'ethereum';
-      const response = await fetch(`https://api.coincap.io/v2/assets/${assetId}`);
-      if (!response.ok) throw new Error("Network response was not ok");
-      const priceData = await response.json();
-      const usdPrice = parseFloat(priceData.data.priceUsd);
-      const usdToPlnRate = 4.0; // Approximate exchange rate USD to PLN, adjust if needed
-      price = usdPrice * usdToPlnRate;
+      const pair = asset === 'bitcoin' ? 'BTCPLN' : 'ETHPLN';
+      const response = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${pair}`);
+      const data = await response.json();
+      console.log("Binance price data:", data);
+      price = parseFloat(data.price);
+      if (isNaN(price)) throw new Error("Invalid price format");
     } catch (error) {
-      console.error("Error fetching from CoinCap:", error);
-      document.getElementById('btcPrice').textContent = "Unavailable (price API error)";
+      console.error("Failed to fetch Binance price:", error);
+      document.getElementById('btcPrice').textContent = "Price unavailable";
       return;
     }
     
@@ -209,7 +208,18 @@
       const asset = document.getElementById('assetSelect').value;
       try {
         
-    const response = await fetch(`https://api.coingecko.com/api/v3/coins/${asset}/market_chart?vs_currency=pln&days=${selectedTimeframe}&interval=hourly`);
+    
+    let data;
+    try {
+      const response = await fetch(`https://api.coingecko.com/api/v3/coins/${asset}/market_chart?vs_currency=pln&days=${selectedTimeframe}&interval=hourly`);
+      data = await response.json();
+      console.log("CoinGecko graph data:", data);
+      if (!data || !data.prices || data.prices.length === 0) throw new Error("Invalid graph data");
+    } catch (graphError) {
+      console.error("Failed to fetch CoinGecko graph data:", graphError);
+      return;
+    }
+    
     
         const data = await response.json();
         
