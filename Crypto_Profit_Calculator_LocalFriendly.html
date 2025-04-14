@@ -1,0 +1,310 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Crypto Profit Calculator + Price Alert</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #141e30, #243b55);
+      color: #ffffff;
+      padding: 20px;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      max-width: 800px; width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 25px 30px;
+      border-radius: 20px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      margin-top: 50px;
+      width: 100%;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #00ffd9;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+      color: #aad8ff;
+    }
+    input[type="number"], select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: none;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 1rem;
+    }
+    button {
+      margin-top: 25px;
+      width: 100%;
+      padding: 12px;
+      font-size: 1rem;
+      font-weight: bold;
+      background: #00ffd9;
+      border: none;
+      color: #000;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.3s ease;
+    }
+    button:hover {
+      background: #00c4aa;
+    }
+    .result {
+      margin-top: 25px;
+      font-size: 1rem;
+      background-color: rgba(0, 0, 0, 0.3);
+      padding: 15px;
+      border-radius: 10px;
+      line-height: 1.6;
+    }
+    .btc-price {
+      margin-bottom: 20px;
+      font-size: 1.2rem;
+      color: #00ffd9;
+    }
+    .btc-price button {
+      margin-top: 10px;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      background-color: #00c4aa;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .btc-price button:hover {
+      background-color: #009e8a;
+    }
+  
+    .tf-btn {
+      padding: 6px 14px;
+      font-size: 0.9rem;
+      border-radius: 20px;
+      background-color: rgba(255,255,255,0.1);
+      border: none;
+      color: #ffffff;
+      cursor: pointer;
+    }
+    .tf-active {
+      background-color: #00ffd9;
+      color: #000000;
+    }
+    .tf-btn:hover {
+      background-color: rgba(255,255,255,0.2);
+    }
+    </style>
+
+</head>
+<body>
+  <div class="container">
+    <h2>🚀 Crypto Profit Calculator + Price Alert</h2>
+    <div style="text-align:center; margin-bottom:10px;">
+      <label style="color:#aad8ff;">Choose Asset:</label>
+      <select id="assetSelect" onchange="fetchBTCPrice(); fetchChartData();">
+        <option value="bitcoin" selected>Bitcoin (BTC)</option>
+        <option value="ethereum">Ethereum (ETH)</option>
+      </select>
+    </div>
+    <div class="btc-price">
+      <strong>Current Price (PLN):</strong> <span id="btcPrice">Loading...</span><br>
+      <button onclick="setBuyPrice()">Set as Buy Price</button>
+    </div>
+    <canvas id="priceChart" style="margin-top:20px; width:100%; height:300px;" style="margin-top:20px; width:100%; max-height:300px;"></canvas>
+    <label>Upper Alert Price (PLN): <input type="number" id="alertPriceUpper" value="330000" /></label>
+    <label>Lower Alert Price (PLN): <input type="number" id="alertPriceLower" value="310000" /></label>
+    <button onclick="enableAlert()">Enable Price Alerts</button>
+    <label>Buy Price (PLN): <input type="number" id="buyPrice" value="30000" /></label>
+    <label>Sell Price (PLN): <input type="number" id="sellPrice" value="325000" /></label>
+    <label>Investment Amount (PLN): <input type="number" id="investment" value="30000" /></label>
+    <label>Exchange Fee per Trade (%): <input type="number" id="fee" value="0.075" step="0.001" /></label>
+    <label>Withdrawal Fee (PLN): <input type="number" id="withdrawalFee" value="1" /></label>
+    <button onclick="calculateProfit()">💸 Calculate Profit</button>
+    <div class="result" id="output"></div>
+    <audio id="alarmSound" src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" preload="auto"></audio>
+  </div>
+
+  <script>
+    let latestPrice = null;
+    let alertEnabled = false;
+    let chart;
+
+    async function fetchBTCPrice() {
+      const asset = document.getElementById('assetSelect').value;
+      try {
+        const response = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=');
+        const data = await response.json();
+        
+
+        
+    
+    let price = null;
+    try {
+      const assetId = asset === 'bitcoin' ? 'bitcoin' : 'ethereum';
+      const response = await fetch(`https://api.coincap.io/v2/assets/${assetId}`);
+      if (!response.ok) throw new Error("Network response was not ok");
+      const priceData = await response.json();
+      const usdPrice = parseFloat(priceData.data.priceUsd);
+      const usdToPlnRate = 4.0; // Approximate exchange rate USD to PLN, adjust if needed
+      price = usdPrice * usdToPlnRate;
+    } catch (error) {
+      console.error("Error fetching from CoinCap:", error);
+      document.getElementById('btcPrice').textContent = "Unavailable (price API error)";
+      return;
+    }
+    
+        latestPrice = price;
+        document.getElementById('btcPrice').textContent = price.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' });
+        checkAlert(price, asset);
+      } catch (error) {
+        console.warn("Failed to fetch live price. Keeping last known value.");
+        if (latestPrice !== null) {
+          document.getElementById('btcPrice').textContent = latestPrice.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }) + " (stale)";
+        } else {
+          document.getElementById('btcPrice').textContent = "Unavailable";
+        }
+      }
+    }
+
+    function setBuyPrice() {
+      if (latestPrice) {
+        document.getElementById('buyPrice').value = latestPrice;
+      }
+    }
+
+    function enableAlert() {
+      alertEnabled = true;
+      const asset = document.getElementById('assetSelect').value;
+      alert(asset.toUpperCase() + " price alerts enabled!");
+    }
+
+    function checkAlert(price, asset) {
+      if (!alertEnabled) return;
+      const upperTarget = parseFloat(document.getElementById('alertPriceUpper').value);
+      const lowerTarget = parseFloat(document.getElementById('alertPriceLower').value);
+      if (price >= upperTarget) {
+        document.getElementById('alarmSound').play();
+        alert(asset.toUpperCase() + " has gone above your upper target: " + price.toLocaleString('pl-PL') + " PLN");
+        alertEnabled = false;
+      } else if (price <= lowerTarget) {
+        document.getElementById('alarmSound').play();
+        alert(asset.toUpperCase() + " has dropped below your lower target: " + price.toLocaleString('pl-PL') + " PLN");
+        alertEnabled = false;
+      }
+    }
+
+    async function fetchChartData() {
+      const asset = document.getElementById('assetSelect').value;
+      try {
+        
+    const response = await fetch(`https://api.coingecko.com/api/v3/coins/${asset}/market_chart?vs_currency=pln&days=${selectedTimeframe}&interval=hourly`);
+    
+        const data = await response.json();
+        
+    const labels = data.prices.map(p => new Date(p[0]).toLocaleDateString('pl-PL', {month:'short',day:'numeric',hour:'numeric'}));
+    
+        const prices = data.prices.map(p => p[1]);
+
+        if (chart) chart.destroy();
+        const ctx = document.getElementById('priceChart').getContext('2d');
+        chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: asset.toUpperCase() + ' Price (PLN)',
+              data: prices,
+              fill: true,
+              borderColor: '#00ffd9',
+              backgroundColor: 'rgba(0,255,217,0.1)',
+              tension: 0.2
+            }]
+          },
+          options: {
+            scales: { x: { display: false }, y: { beginAtZero: false } },
+            plugins: { legend: { display: true } },
+            responsive: true,
+            maintainAspectRatio: false
+          }
+        });
+      } catch (err) {
+        console.error("Chart error", err);
+      }
+    }
+
+    function calculateProfit() {
+      const asset = document.getElementById('assetSelect').value;
+      const buyPrice = parseFloat(document.getElementById('buyPrice').value);
+      const sellPrice = parseFloat(document.getElementById('sellPrice').value);
+      const investment = parseFloat(document.getElementById('investment').value);
+      const feePercent = parseFloat(document.getElementById('fee').value);
+      const withdrawalFee = parseFloat(document.getElementById('withdrawalFee').value);
+
+      const depositFee = investment * 0.01;
+      const netInvestment = investment - depositFee;
+
+      const paddedBuyPrice = asset === 'ethereum'
+        ? buyPrice * 1.05
+        : buyPrice * (1 + 2000 / buyPrice);
+      const buyFee = netInvestment * (feePercent / 100);
+      const cryptoBought = (netInvestment - buyFee) / paddedBuyPrice;
+
+      const paddedSellPrice = asset === 'ethereum'
+        ? sellPrice * 0.95
+        : sellPrice - 2000;
+      const valueAtSell = cryptoBought * paddedSellPrice;
+      const sellFee = valueAtSell * (feePercent / 100);
+      const netValue = valueAtSell - sellFee - withdrawalFee;
+      const profit = netValue - investment;
+
+      document.getElementById('output').innerHTML =
+        `<h3 style="color:#00ffd9;">Step-by-Step Breakdown</h3>` +
+        `<div style="line-height:1.8;">` +
+        `<strong>Asset Bought:</strong> ${cryptoBought.toFixed(8)}<br>` +
+        `<strong>Sell Value:</strong> ${valueAtSell.toFixed(2)} PLN<br>` +
+        `<strong>Deposit Fee:</strong> ${depositFee.toFixed(2)} PLN<br>` +
+        `<strong>Buy Fee:</strong> ${buyFee.toFixed(2)} PLN<br>` +
+        `<strong>Sell Fee:</strong> ${sellFee.toFixed(2)} PLN<br>` +
+        `<strong>Withdrawal Fee:</strong> ${withdrawalFee.toFixed(2)} PLN<br>` +
+        `<strong style="color: #00ffd9;">Net Value After All Fees:</strong> ${netValue.toFixed(2)} PLN<br>` +
+        `<hr style="margin:15px 0;"><div style="line-height:1.8; font-size:0.95rem; color:#aad8ff;"><strong>Explanation:</strong><br>
+        1. <strong>Deposit Fee (1%)</strong> is subtracted first<br>
+        2. <strong>Buy Fee</strong> is taken before buying crypto<br>
+        3. You get crypto at a <strong>padded (worse)</strong> price<br>
+        4. <strong>Sell Value</strong> = your crypto × adjusted sell price<br>
+        5. Then <strong>Sell Fee</strong> and <strong>Withdrawal Fee</strong> are subtracted<br>
+        6. Final result is <strong>Net Value</strong>, and<br>
+        7. <strong>Net Profit = Net Value – Investment</strong></div><br><br><strong>Net Profit:</strong> ${profit.toFixed(2)} PLN</div>`;
+    }
+
+    
+    let selectedTimeframe = 30;
+
+    function setTimeframe(days) {
+      selectedTimeframe = days;
+      document.querySelectorAll('.tf-btn').forEach(btn => btn.classList.remove('tf-active'));
+      event.currentTarget.classList.add('tf-active');
+      fetchChartData();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+    
+      fetchBTCPrice();
+      fetchChartData();
+      setInterval(fetchBTCPrice, 10000); // refresh every 10 seconds
+    });
+  </script>
+</body>
+</html>
